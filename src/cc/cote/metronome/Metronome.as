@@ -8,11 +8,25 @@ package cc.cote.metronome
 	import flash.media.SoundChannel;
 	
 	/**
-	 * Dispatched when the metronome ticks.
+	 * Dispatched when the metronome starts.
+	 * 
+	 * @eventType cc.cote.metronome.MetronomeEvent.START
+	 */
+	[Event(name="start", type="cc.cote.metronome.MetronomeEvent")]
+	
+	/**
+	 * Dispatched each time the metronome ticks.
 	 * 
 	 * @eventType cc.cote.metronome.MetronomeEvent.TICK
 	 */
-	[Event(name="cc.cote.metronome.MetronomeEvent.TICK", type="cc.cote.metronome.MetronomeEvent")]
+	[Event(name="tick", type="cc.cote.metronome.MetronomeEvent")]
+	
+	/**
+	 * Dispatched when the metronome stops.
+	 * 
+	 * @eventType cc.cote.metronome.MetronomeEvent.STOP
+	 */
+	[Event(name="stop", type="cc.cote.metronome.MetronomeEvent")]
 	
 	/**
 	 * The <code>Metronome</code> class plays a beep sound (optional) and dispatches events at a 
@@ -32,7 +46,7 @@ package cc.cote.metronome
 	 * metro.start();</listing>
 	 * 
 	 * <p>If you want to perform your own tasks when it ticks, simply listen to the 
-	 * <code>MetronomeEvent.TICK<code> event:</p>
+	 * <code>MetronomeEvent.TICK</code> event:</p>
 	 * 
 	 * <listing version="3.0">
 	 * var metro:Metronome = new Metronome(140);
@@ -43,18 +57,19 @@ package cc.cote.metronome
 	 * 	trace('Tick!');
 	 * }</listing>
 	 * 
-	 * Attention: because of its use of the <code>SampleDataEvent<code> of the Sound API, the 
+	 * Attention: because of its use of the <code>SampleDataEvent</code> of the Sound API, the 
 	 * <code>Metronome</code> only works in Flash Player 10+ and AIR 1.5+.
 	 * 
 	 * @see http://cote.cc/projects/metronome
+	 * @see cc.cote.metronome.MetronomeEvent
 	 */
 	public class Metronome extends EventDispatcher
 	{
-		/** Only acceptable sound sample rate (in Hertz). */
+		/** The only acceptable sound sample rate in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
 		
-		[Embed(source='sounds/Sine880Hz.mp3')] private const Sine880Hz:Class;
-		[Embed(source='sounds/Sine1760Hz.mp3')] private const Sine1760Hz:Class;
+		[Embed(source='sounds/Sine880Hz.mp3')] private var Sine880Hz:Class;
+		[Embed(source='sounds/Sine1760Hz.mp3')] private var Sine1760Hz:Class;
 		
 		private var _tempo:Number = 120;
 		private var _interval:Number = 500.0;
@@ -99,6 +114,7 @@ package cc.cote.metronome
 			_ticks = 0;
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
 			_sound.addEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true);
+			dispatchEvent( new MetronomeEvent(MetronomeEvent.START, _lastTickTime, _ticks));
 			_tick();
 		}
 		
@@ -108,6 +124,7 @@ package cc.cote.metronome
 		public function stop():void {
 			_sound.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
 			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
+			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _lastTickTime, _ticks));
 			_samplesBeforeTick = 0;
 		}
 		
@@ -233,7 +250,7 @@ package cc.cote.metronome
 		}
 		
 		/**
-		 * The base tells the <code>Metronome</code> when to play an accented beep. The accented 
+		 * The base tells the <code>Metronome</code> when to play accented beeps. The accented 
 		 * beep is played once every n beats where n is the base. If you set the base to 1, all 
 		 * beeps will be accented. If you set the base to 0, no beat will be accented.
 		 */

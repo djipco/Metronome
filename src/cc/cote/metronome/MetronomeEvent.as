@@ -11,10 +11,28 @@ package cc.cote.metronome
 	public class MetronomeEvent extends Event
 	{
 		
-		/** Defines the value of the type property of a tick event object. */
+		/** 
+		 * The <code>TICK</code> constant defines the value of the <code>type</code> property of a 
+		 * <code>tick</code> event object.
+		 * 
+		 * @eventType tick
+		 */
 		public static const TICK:String = 'tick';
+
+		/** 
+		 * The <code>START</code> constant defines the value of the <code>type</code> property of a 
+		 * <code>start</code> event object.
+		 * 
+		 * @eventType start
+		 */
+		public static const START:String = 'start';
 		
-		/** Defines the value of the type property of a stop event object. */
+		/** 
+		 * The <code>STOP</code> constant defines the value of the <code>STOP</code> property of a 
+		 * <code>STOP</code> event object.
+		 * 
+		 * @eventType start
+		 */
 		public static const STOP:String = 'stop';
 		
 		private var _time:Number;
