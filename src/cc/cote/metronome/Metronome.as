@@ -84,9 +84,10 @@ package cc.cote.metronome
 		private var _regularBeep:Sound;
 		private var _accentedBeep:Sound;
 		private var _i:uint = 0;
+		private var _running:Boolean;
 		
 		/**
-		 * Constructs a new <code>Metronome</code> object pre-set with the desired tempo.
+		 * Constructs a new <code>Metronome</code> object pre-set with at the desired tempo.
 		 * 
 		 * @param tempo 	The tempo to set the Metronome to (can be altered anytime with the 
 		 * 					'tempo' property).
@@ -115,6 +116,7 @@ package cc.cote.metronome
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
 			_sound.addEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true);
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.START, _lastTickTime, _ticks));
+			_running = true;
 			_tick();
 		}
 		
@@ -122,10 +124,12 @@ package cc.cote.metronome
 		 * Stops the metronome.
 		 */
 		public function stop():void {
-			_sound.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
+			_running = false;
 			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
-			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _lastTickTime, _ticks));
+			_sound.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
+			_soundChannel.stop();
 			_samplesBeforeTick = 0;
+			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _lastTickTime, _ticks));
 		}
 		
 		/** @private */
@@ -152,6 +156,7 @@ package cc.cote.metronome
 		
 		private function _tick(e:Event = null):void {
 			
+			
 			// Offset from where we are supposed to be
 			//			var offset:Number = new Date().getTime() - (_startTime + (_ticks * _interval));
 			//			trace(offset);
@@ -170,10 +175,19 @@ package cc.cote.metronome
 				}
 			}
 			
+			// Calculate the interval before next tick. If the interval is negative (meaning it 
+			// should have been triggered already but was delayed by host processing), tick right 
+			// away (in the hope of catching up). That's the best we can do.
 			var delay:Number = _startTime + (_ticks * _interval) - _lastTickTime;
+			if (delay <= 10) _tick();
+			
 			_samplesBeforeTick = delay / 1000 * SAMPLE_RATE;
-			_soundChannel = _sound.play();
-			_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
+			
+			// Only set the next event if the metronome is still running			
+			if (_running) {
+				_soundChannel = _sound.play();
+				_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
+			}
 			
 		}
 		
@@ -260,6 +274,11 @@ package cc.cote.metronome
 		
 		public function set base(value:uint):void {
 			_base = value;
+		}
+
+		/** Indicates whether the metronome is currently running. */ 
+		public function get running():Boolean {
+			return _running;
 		}
 		
 	}
