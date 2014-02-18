@@ -57,8 +57,8 @@ package cc.cote.metronome
 	 * 	trace('Tick!');
 	 * }</listing>
 	 * 
-	 * Attention: because of its use of the <code>SampleDataEvent</code> of the Sound API, the 
-	 * <code>Metronome</code> only works in Flash Player 10+ and AIR 1.5+.
+	 * Attention: because of it uses the <code>SampleDataEvent</code> of the Sound API, the 
+	 * <code>Metronome</code> class only works in Flash Player 10+ and AIR 1.5+.
 	 * 
 	 * @see cc.cote.metronome.MetronomeEvent
 	 * @see http://cote.cc/projects/metronome
@@ -71,8 +71,8 @@ package cc.cote.metronome
 		/** The only acceptable sound sample rate in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
 		
-		[Embed(source='sounds/Sine880Hz.mp3')] private var Sine880Hz:Class;
-		[Embed(source='sounds/Sine1760Hz.mp3')] private var Sine1760Hz:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private var Sine880Hz:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private var Sine1760Hz:Class;
 		
 		private var _tempo:Number = 120;
 		private var _interval:Number = 500.0;
