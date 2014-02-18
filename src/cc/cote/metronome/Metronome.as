@@ -66,7 +66,7 @@ package cc.cote.metronome
 	public class Metronome extends EventDispatcher
 	{
 		/** Version string of this release */
-		public static const VERSION:String = '1.0a rev3';
+		public static const VERSION:String = '1.0a rev4';
 		
 		/** The only acceptable sound sample rate in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
