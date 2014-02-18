@@ -60,13 +60,13 @@ package cc.cote.metronome
 	 * Attention: because of its use of the <code>SampleDataEvent</code> of the Sound API, the 
 	 * <code>Metronome</code> only works in Flash Player 10+ and AIR 1.5+.
 	 * 
-	 * @see http://cote.cc/projects/metronome
 	 * @see cc.cote.metronome.MetronomeEvent
+	 * @see http://cote.cc/projects/metronome
 	 */
 	public class Metronome extends EventDispatcher
 	{
 		/** Version string of this release */
-		public static const VERSION:String = '1.0a rev2';
+		public static const VERSION:String = '1.0a rev3';
 		
 		/** The only acceptable sound sample rate in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
@@ -87,7 +87,8 @@ package cc.cote.metronome
 		private var _regularBeep:Sound;
 		private var _accentedBeep:Sound;
 		private var _i:uint = 0;
-		private var _running:Boolean;
+		private var _running:Boolean = false;
+		private var _missed:uint = 0;
 		
 		/**
 		 * Constructs a new <code>Metronome</code> object pre-set with at the desired tempo.
@@ -116,6 +117,7 @@ package cc.cote.metronome
 		public function start():void {
 			_startTime = new Date().getTime();
 			_ticks = 0;
+			_missed = 0;
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
 			_sound.addEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true);
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.START, _lastTickTime, _ticks));
@@ -159,10 +161,12 @@ package cc.cote.metronome
 		
 		private function _tick(e:Event = null):void {
 			
+			// If metronome has been stopped, we shouldn't continue dispatching events
+			if (! _running) return;
 			
 			// Offset from where we are supposed to be
-			//			var offset:Number = new Date().getTime() - (_startTime + (_ticks * _interval));
-			//			trace(offset);
+//			var offset:Number = new Date().getTime() - (_startTime + (_ticks * _interval));
+//			trace(offset);
 			
 			// Jot down current tick info and dispatch event
 			_lastTickTime = new Date().getTime();
@@ -179,18 +183,18 @@ package cc.cote.metronome
 			}
 			
 			// Calculate the interval before next tick. If the interval is negative (meaning it 
-			// should have been triggered already but was delayed by host processing), tick right 
-			// away (in the hope of catching up). That's the best we can do.
+			// should have been triggered already but was delayed because the host was overloaded), 
+			// tick right away (in the hope of catching up). That's the best we can do.
 			var delay:Number = _startTime + (_ticks * _interval) - _lastTickTime;
-			if (delay <= 10) _tick();
+			if (delay <= 10) {
+				_missed++;
+				_tick();
+				return;
+			}
 			
 			_samplesBeforeTick = delay / 1000 * SAMPLE_RATE;
-			
-			// Only set the next event if the metronome is still running			
-			if (_running) {
-				_soundChannel = _sound.play();
-				_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
-			}
+			_soundChannel = _sound.play();
+			_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
 			
 		}
 		
@@ -275,6 +279,7 @@ package cc.cote.metronome
 			return _base;
 		}
 		
+		/** @private */
 		public function set base(value:uint):void {
 			_base = value;
 		}
@@ -283,9 +288,30 @@ package cc.cote.metronome
 		public function get running():Boolean {
 			return _running;
 		}
+
+		/** 
+		 * The number of times, since the metronome was started, that it couldn't properly schedule 
+		 * a tick. This is typically caused by the processor being overloaded during one or a few 
+		 * frames. If you get misses, make sure each frame's code is processed within the time it 
+		 * has been allocated.
+		 * 
+		 * <p>For example, if you are running your application at 30 frames per second, each frame 
+		 * has 33.3 milliseconds to complete its tasks. If it takes more than that, all processing 
+		 * occuring after will be pushed back. In some instances (depending on frame rate and 
+		 * metronome tempo), this could mean the processing of the Metronome events will be pushed 
+		 * so far back that it will actually occur after a TICK should have been dispatched. If this 
+		 * happens, the metronome will fire two or more TICKs back-to-back in order to stay in line 
+		 * with the tempo.</p>
+		 * 
+		 * <p>Obviously, this is not desirable. The solution is to adjust your code so it stays
+		 * within its allocated frame time (budget). You can verify that by using a tool such as 
+		 * Adobe Scout.</p>
+		 */
+		public function get missed():uint {
+			return _missed;
+		}
 		
 	}
 	
 }
-
 
