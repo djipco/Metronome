@@ -1,6 +1,7 @@
 package cc.cote.metronome
 {
 	
+	import flash.errors.IllegalOperationError;
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.events.SampleDataEvent;
@@ -159,6 +160,7 @@ package cc.cote.metronome
 			
 		}
 		
+		/** @private */
 		private function _tick(e:Event = null):void {
 			
 			// If metronome has been stopped, we shouldn't continue dispatching events
@@ -194,7 +196,12 @@ package cc.cote.metronome
 			
 			_samplesBeforeTick = delay / 1000 * SAMPLE_RATE;
 			_soundChannel = _sound.play();
-			_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
+			if (!_soundChannel) {
+				throw new IllegalOperationError(
+					"No sound channels are available to use as Metronome's time reference"
+				);
+				return;
+			}
 			
 		}
 		
