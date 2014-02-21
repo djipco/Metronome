@@ -58,22 +58,32 @@ package cc.cote.metronome
 	 * 	trace('Tick!');
 	 * }</listing>
 	 * 
-	 * Attention: because of it uses the <code>SampleDataEvent</code> of the Sound API, the 
-	 * <code>Metronome</code> class only works in Flash Player 10+ and AIR 1.5+.
+	 * <p><b>Using in Flash Pro</b></p>
+	 * 
+	 * <p>This library uses sound assets embedded with the <code>[Embed]</code> instruction. This 
+	 * will work fine in FlashBuilder (and tools that use similar compilers) but might give you 
+	 * problems in Flash Pro. If you are using Flash Pro, you should simply link the 
+	 * <code>swc</code> file to avoid any issues.</p>
+	 * 
+	 * <p><b>Requirements</b></p>
+	 * 
+	 * <p>Because it uses the <code>SampleDataEvent</code> class of the Sound API, the 
+	 * <code>Metronome</code> class only works in Flash Player 10+ and AIR 1.5+.</p>
 	 * 
 	 * @see cc.cote.metronome.MetronomeEvent
 	 * @see http://cote.cc/projects/metronome
 	 */
 	public class Metronome extends EventDispatcher
 	{
+		
 		/** Version string of this release */
-		public static const VERSION:String = '1.0a rev4';
+		public static const VERSION:String = '1.0a rev5';
 		
 		/** The only acceptable sound sample rate in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
 		
-		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private var Sine880Hz:Class;
-		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private var Sine1760Hz:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private var NormalBeep:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private var AccentedBeep:Class;
 		
 		private var _tempo:Number = 120;
 		private var _interval:Number = 500.0;
@@ -106,8 +116,8 @@ package cc.cote.metronome
 			this.base = base;
 			this.silent = silent;
 			
-			_regularBeep = new Sine880Hz();
-			_accentedBeep = new Sine1760Hz();
+			_regularBeep = new NormalBeep();
+			_accentedBeep = new AccentedBeep();
 		}
 		
 		/**
@@ -134,8 +144,8 @@ package cc.cote.metronome
 			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
 			_sound.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
 			_soundChannel.stop();
-			_samplesBeforeTick = 0;
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _lastTickTime, _ticks));
+			_samplesBeforeTick = 0;
 		}
 		
 		/** @private */
@@ -166,10 +176,6 @@ package cc.cote.metronome
 			// If metronome has been stopped, we shouldn't continue dispatching events
 			if (! _running) return;
 			
-			// Offset from where we are supposed to be
-//			var offset:Number = new Date().getTime() - (_startTime + (_ticks * _interval));
-//			trace(offset);
-			
 			// Jot down current tick info and dispatch event
 			_lastTickTime = new Date().getTime();
 			_ticks++;
@@ -196,11 +202,13 @@ package cc.cote.metronome
 			
 			_samplesBeforeTick = delay / 1000 * SAMPLE_RATE;
 			_soundChannel = _sound.play();
-			if (!_soundChannel) {
+			if (_soundChannel) {
+				// Cannot use weak listener here (&*?%). I don't know why.
+				_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
+			} else {
 				throw new IllegalOperationError(
 					"No sound channels are available to use as Metronome's time reference"
 				);
-				return;
 			}
 			
 		}
@@ -316,6 +324,34 @@ package cc.cote.metronome
 		 */
 		public function get missed():uint {
 			return _missed;
+		}
+
+		/**
+		 * The beeping sound that plays for 'normal' beats. A 'normal' beat is one that falls on 
+		 * beats not divisible by the <code>base</code> property. If you decide to use you own 
+		 * sound, its duration should be shorter than the interval between two beats.
+		 */
+		public function get regularBeep():Sound {
+			return _regularBeep;
+		}
+		
+		/** @private */
+		public function set regularBeep(value:Sound):void {
+			_regularBeep = value;
+		}
+
+		/**
+		 * The beeping sound that plays for 'accented' beats. An 'accented' beat is one that falls 
+		 * on beats divisible by the <code>base</code> property. If you decide to use you own sound, 
+		 * its duration should be shorter than the interval between two beats.
+		 */
+		public function get accentedBeep():Sound {
+			return _accentedBeep;
+		}
+
+		/** @private */
+		public function set accentedBeep(value:Sound):void {
+			_accentedBeep = value;
 		}
 		
 	}
