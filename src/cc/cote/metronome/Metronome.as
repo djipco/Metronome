@@ -61,9 +61,9 @@ package cc.cote.metronome
 	 * <p><b>Using in Flash Pro</b></p>
 	 * 
 	 * <p>This library uses sound assets embedded with the <code>[Embed]</code> instruction. This 
-	 * will work fine in FlashBuilder (and tools that use similar compilers) but might give you 
+	 * will work fine in FlashBuilder (and tools that use a similar compiler) but might give you 
 	 * problems in Flash Pro. If you are using Flash Pro, you should simply link the 
-	 * <code>swc</code> file to avoid any issues.</p>
+	 * <code>Metronome.swc</code> file to avoid any issues.</p>
 	 * 
 	 * <p><b>Requirements</b></p>
 	 * 
@@ -72,12 +72,13 @@ package cc.cote.metronome
 	 * 
 	 * @see cc.cote.metronome.MetronomeEvent
 	 * @see http://cote.cc/projects/metronome
+	 * @see http://github.com/cotejp/Metronome
 	 */
 	public class Metronome extends EventDispatcher
 	{
 		
 		/** Version string of this release */
-		public static const VERSION:String = '1.0a rev5';
+		public static const VERSION:String = '1.0a rev6';
 		
 		/** The only acceptable sound sample rate in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
@@ -115,7 +116,7 @@ package cc.cote.metronome
 		 * 						maximum.
 		 */
 		public function Metronome(
-			tempo:uint = 120, silent:Boolean = false, base:uint = 4, maxTickCount = 0
+			tempo:uint = 120, silent:Boolean = false, base:uint = 4, maxTickCount:uint = 0
 		) {
 			this.tempo = tempo;
 			this.silent = silent;
@@ -132,13 +133,12 @@ package cc.cote.metronome
 		 * <code>false</code>.
 		 */
 		public function start():void {
-			_startTime = new Date().getTime();
 			_ticks = 0;
 			_missed = 0;
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
 			_sound.addEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true);
-			dispatchEvent( new MetronomeEvent(MetronomeEvent.START, _lastTickTime, _ticks));
 			_running = true;
+			_startTime = new Date().getTime();
 			_tick();
 		}
 		
@@ -182,9 +182,13 @@ package cc.cote.metronome
 			// If metronome has been stopped, we shouldn't continue dispatching events
 			if (! _running) return;
 			
-			// Jot down current tick info and dispatch event
+			// Jot down current tick info and dispatch event (tick is dispatched all the time while
+			// start is dispatched only the first time)
 			_lastTickTime = new Date().getTime();
 			_ticks++;
+			if (_ticks == 1) {
+				dispatchEvent( new MetronomeEvent(MetronomeEvent.START, _lastTickTime, 0));
+			}
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.TICK, _lastTickTime, _ticks));
 			
 			// Play beep if requested
