@@ -1,6 +1,7 @@
 package cc.cote.metronome
 {
 	import flash.events.Event;
+	import flash.utils.getQualifiedClassName;
 	
 	/**
 	 * <code>MetronomeEvent</code> objects are dispatched by a <code>Metronome</code> object to 
@@ -52,6 +53,18 @@ package cc.cote.metronome
 			super(type);
 			_time = time;
 			_count = count;
+		}
+		
+		/**
+		 * Returns a string representation of the event including the most useful properties for
+		 * debugging.
+		 */
+		override public function toString():String {
+
+			return 	'[' + getQualifiedClassName(this).split("::").pop() + 
+				' type="' + type + '" time=' + _time + 
+				' count=' + _count + ']';
+		
 		}
 		
 		/** 
