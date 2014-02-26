@@ -100,21 +100,27 @@ package cc.cote.metronome
 		private var _i:uint = 0;
 		private var _running:Boolean = false;
 		private var _missed:uint = 0;
+		private var _maxTickCount:uint = 0;
 		
 		/**
 		 * Constructs a new <code>Metronome</code> object pre-set with at the desired tempo.
 		 * 
-		 * @param tempo 	The tempo to set the Metronome to (can be altered anytime with the 
-		 * 					'tempo' property).
-		 * @param silent	Indicates whether the Metronome should play audible beeps or stay 
-		 * 					silent.
-		 * @param base		Determines when to play accented beeps. Accented beeps will play once in 
-		 * 					every n beats where n is the base.
+		 * @param tempo 		The tempo to set the Metronome to (can be altered anytime with the 
+		 * 						'tempo' property).
+		 * @param silent		Indicates whether the Metronome should play audible beeps or stay 
+		 * 						silent.
+		 * @param base			Determines when to play accented beeps. Accented beeps will play 
+		 * 						once in every n beats where n is the base.
+		 * @param maxTickCount	The maximum number ot ticks to trigger. The default (0) means no 
+		 * 						maximum.
 		 */
-		public function Metronome(tempo:uint = 120, silent:Boolean = false, base:uint = 4) {
+		public function Metronome(
+			tempo:uint = 120, silent:Boolean = false, base:uint = 4, maxTickCount = 0
+		) {
 			this.tempo = tempo;
-			this.base = base;
 			this.silent = silent;
+			this.base = base;
+			_maxTickCount = maxTickCount;
 			
 			_regularBeep = new NormalBeep();
 			_accentedBeep = new AccentedBeep();
@@ -188,6 +194,12 @@ package cc.cote.metronome
 				} else {
 					_regularBeep.play();
 				}
+			}
+			
+			// Check if _maxTickCount would be exceeded by scheduling another tick
+			if (_ticks >= _maxTickCount && _maxTickCount != 0) {
+				stop();
+				return;
 			}
 			
 			// Calculate the interval before next tick. If the interval is negative (meaning it 
@@ -353,7 +365,17 @@ package cc.cote.metronome
 		public function set accentedBeep(value:Sound):void {
 			_accentedBeep = value;
 		}
-		
+
+		/** The maximum number of times the Metronome should tick. A value of 0 means no maximum. */
+		public function get maxTickCount():uint {
+			return _maxTickCount;
+		}
+
+		/** @private */
+		public function set maxTickCount(value:uint):void {
+			_maxTickCount = value;
+		}
+
 	}
 	
 }
