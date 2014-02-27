@@ -4,8 +4,8 @@ package cc.cote.metronome
 	import flash.utils.getQualifiedClassName;
 	
 	/**
-	 * <code>MetronomeEvent</code> objects are dispatched by a <code>Metronome</code> object to 
-	 * inform listeners of changes in the <code>MetronomeEvent</code>'s state.
+	 * <code>MetronomeEvent</code> objects are dispatched by a <code>Metronome</code> to inform 
+	 * listeners of changes in the <code>Metronome</code>'s state.
 	 * 
 	 * @see cc.cote.metronome.Metronome
 	 */
@@ -44,15 +44,15 @@ package cc.cote.metronome
 		 * occured.
 		 * 
 		 * @param type 	The type of the event.
-		 * @param time 	The time at which the event occured (in milliseconds since January 1st, 1970 
-		 * 				UTC.
 		 * @param count	The number ot ticks triggered by a the Metronome object dispatching this 
 		 * 				event since it was started.
+		 * @param time 	The time at which the event occured (in milliseconds since January 1st, 1970 
+		 * 				UTC.
 		 */
-		public function MetronomeEvent(type:String, time:Number, count:Number) {
+		public function MetronomeEvent(type:String, count:Number, time:Number) {
 			super(type);
-			_time = time;
 			_count = count;
+			_time = time;
 		}
 		
 		/**
@@ -62,8 +62,7 @@ package cc.cote.metronome
 		override public function toString():String {
 
 			return 	'[' + getQualifiedClassName(this).split("::").pop() + 
-				' type="' + type + '" time=' + _time + 
-				' count=' + _count + ']';
+				' type="' + type + '" count=' + _count + ' time=' + _time + ']';
 		
 		}
 		
