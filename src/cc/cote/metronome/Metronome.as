@@ -111,24 +111,29 @@ package cc.cote.metronome
 		/** The maximum sound sample rate available in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
 		
-		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private var NormalBeep:Class;
-		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private var AccentedBeep:Class;
-		[Embed(source='/cc/cote/metronome/sounds/Silence.mp3')] private var Reference:Class;
+		/**
+		 * Max number of samples that can be written to the audio buffer at once. The minimum is
+		 * 2048. Below that, the channel will trigger a SOUND_COMPLETE event.
+		 * @private 
+		 */
+		private const MAX_BUFFER_SAMPLES:uint = 8192;
+		
+		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private const NormalBeep:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private const AccentedBeep:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Silence.mp3')] private const Reference:Class;
 		
 		private var _tempo:Number = 120;
 		private var _interval:Number = 500.0;
 		private var _startTime:Number = NaN;
 		private var _lastTickTime:Number = NaN;
 		private var _ticks:Number = 0.0;
-//		private var _preciseModeSoundReference:Sound = new Sound();
-		private var _soundChannel:SoundChannel;
 		private var _silent:Boolean = false;
 		private var _base:uint = 4;
-		private var _samplesBeforeTick:uint;
 		private var _regularBeep:Sound;
 		private var _accentedBeep:Sound;
-		private var _normalModeSoundReference:Sound;
-		private var _i:uint = 0;
+		private var _soundReference:Sound;
+		private var _soundChannel:SoundChannel;
+		private var _samplesBeforeTick:uint;
 		private var _running:Boolean = false;
 		private var _missed:uint = 0;
 		private var _maxTickCount:uint = 0;
@@ -157,9 +162,9 @@ package cc.cote.metronome
 			
 			_regularBeep = new NormalBeep();
 			_accentedBeep = new AccentedBeep();
-			_normalModeSoundReference = new Reference();
+			_soundReference = new Reference();
 			
-			_ba.length = 8192 * 4 * 2;
+			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2;
 		}
 		
 		/**
@@ -181,7 +186,7 @@ package cc.cote.metronome
 		
 		private function _initializePreciseMode():void {
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
-			_preciseModeSoundReference.addEventListener(
+			_soundReference.addEventListener(
 				SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true
 			);
 		}
@@ -190,9 +195,11 @@ package cc.cote.metronome
 		 * Stops the metronome.
 		 */
 		public function stop():void {
+			if ( _soundReference.hasEventListener(SampleDataEvent.SAMPLE_DATA) ) {
+				_soundReference.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
+			}
 			_running = false;
 			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
-			_preciseModeSoundReference.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
 			_soundChannel.stop();
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime));
 			_samplesBeforeTick = 0;
@@ -211,9 +218,9 @@ package cc.cote.metronome
 			// To maintain sound playback, we need to write between 2048 and 8192 samples to the 
 			// SampleDataEvent's byte array. If we write less (or none), the channel fires the 
 			// SOUND_COMPLETE event. If we try to write more, we get an error.
-			if (_samplesBeforeTick >= 8192) {
+			if (_samplesBeforeTick >= MAX_BUFFER_SAMPLES) {
 				e.data.writeBytes(_ba);
-				_samplesBeforeTick -= 8192;
+				_samplesBeforeTick -= MAX_BUFFER_SAMPLES;
 			} else if (_samplesBeforeTick > 0) {
 				e.data.writeBytes(_ba, 0, _samplesBeforeTick * 4 * 2);
 				_samplesBeforeTick = 0;
@@ -265,11 +272,9 @@ package cc.cote.metronome
 			
 			if (_extraPrecise) {
 				_samplesBeforeTick = delay / 1000 * SAMPLE_RATE;
-				_soundChannel = _preciseModeSoundReference.play();
+				_soundChannel = _soundReference.play();
 			} else {
-				_soundChannel = _normalModeSoundReference.play(
-					_normalModeSoundReference.length - delay
-				);				
+				_soundChannel = _soundReference.play(_soundReference.length - delay);				
 			}
 			
 			if (_soundChannel) {
@@ -475,6 +480,11 @@ package cc.cote.metronome
 				return;
 			}
 			_extraPrecise = value;
+			if (_extraPrecise) {
+				_soundReference = new Sound();
+			} else {
+				_soundReference = new Reference();
+			}
 		}
 
 	}
