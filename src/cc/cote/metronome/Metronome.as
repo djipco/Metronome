@@ -129,9 +129,9 @@ package cc.cote.metronome
 		private var _ticks:Number = 0.0;
 		private var _silent:Boolean = false;
 		private var _base:uint = 4;
-		private var _regularBeep:Sound;
-		private var _accentedBeep:Sound;
-		private var _soundReference:Sound;
+		private var _regularBeep:Sound = new NormalBeep();
+		private var _accentedBeep:Sound = new AccentedBeep();
+		private var _soundReference:Sound = new Reference();
 		private var _soundChannel:SoundChannel;
 		private var _samplesBeforeTick:uint;
 		private var _running:Boolean = false;
@@ -159,12 +159,7 @@ package cc.cote.metronome
 			this.silent = silent;
 			this.base = base;
 			_maxTickCount = maxTickCount;
-			
-			_regularBeep = new NormalBeep();
-			_accentedBeep = new AccentedBeep();
-			_soundReference = new Reference();
-			
-			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2;
+			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2; // Samples are floats and stereo (hence *4 *2)
 		}
 		
 		/**
@@ -173,17 +168,15 @@ package cc.cote.metronome
 		 * <code>false</code>.
 		 */
 		public function start():void {
-			
+			_running = true;
 			_ticks = 0;
 			_missed = 0;
-			_running = true;
-			_startTime = new Date().getTime();
-			
 			if (_extraPrecise) _initializePreciseMode();
-			
+			_startTime = new Date().getTime();
 			_tick();
 		}
 		
+		/** @private */
 		private function _initializePreciseMode():void {
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
 			_soundReference.addEventListener(
@@ -201,7 +194,7 @@ package cc.cote.metronome
 			_running = false;
 			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
 			_soundChannel.stop();
-			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime));
+			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime) );
 			_samplesBeforeTick = 0;
 		}
 		
@@ -215,9 +208,6 @@ package cc.cote.metronome
 //				trace(latency);
 //			}
 			
-			// To maintain sound playback, we need to write between 2048 and 8192 samples to the 
-			// SampleDataEvent's byte array. If we write less (or none), the channel fires the 
-			// SOUND_COMPLETE event. If we try to write more, we get an error.
 			if (_samplesBeforeTick >= MAX_BUFFER_SAMPLES) {
 				e.data.writeBytes(_ba);
 				_samplesBeforeTick -= MAX_BUFFER_SAMPLES;
@@ -234,7 +224,7 @@ package cc.cote.metronome
 			// If metronome has been stopped, we shouldn't continue dispatching events
 			if (! _running) return;
 			
-			trace(new Date().getTime() - (_startTime + _interval * (_ticks - 1)) - _interval);
+			//trace(new Date().getTime() - (_startTime + _interval * (_ticks - 1)) - _interval);
 			
 			// Jot down current tick info and dispatch event (tick is dispatched all the time while
 			// start is dispatched only the first time)
@@ -245,7 +235,7 @@ package cc.cote.metronome
 			}
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.TICK, _ticks, _lastTickTime));
 			
-			// Play beep if requested
+			// Play audible beeps if requested
 			if (! _silent) {
 				if (_ticks % _base == 1 || base == 1) {
 					_accentedBeep.play();
@@ -262,7 +252,7 @@ package cc.cote.metronome
 			
 			// Calculate the interval before next tick. If the interval is negative (meaning it 
 			// should have been triggered already but was delayed because the host was overloaded), 
-			// tick right away (in the hope of catching up). That's the best we can do.
+			// tick right away (in the hopes of catching up). That's the best we can do.
 			var delay:Number = _startTime + (_ticks * _interval) - _lastTickTime;
 			if (delay <= 10) {
 				_missed++;
@@ -422,7 +412,7 @@ package cc.cote.metronome
 
 		/**
 		 * The beeping sound that plays for 'normal' beats. A 'normal' beat is one that falls on 
-		 * beats not divisible by the <code>base</code> property. If you decide to use you own 
+		 * beats not divisible by the <code>base</code> property. If you decide to use your own 
 		 * sound, its duration should be shorter than the interval between two beats.
 		 */
 		public function get regularBeep():Sound {
@@ -473,18 +463,22 @@ package cc.cote.metronome
 
 		/** @private */
 		public function set extraPrecise(value:Boolean):void {
+			
 			if (_running) {
 				throw new IllegalOperationError(
 					"The 'extraPecise' mode cannot be changed while the Metronome is running"
 				);
 				return;
 			}
+			
 			_extraPrecise = value;
+			
 			if (_extraPrecise) {
 				_soundReference = new Sound();
 			} else {
 				_soundReference = new Reference();
 			}
+			
 		}
 
 	}
