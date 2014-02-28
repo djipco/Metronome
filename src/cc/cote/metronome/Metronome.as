@@ -4,10 +4,10 @@ package cc.cote.metronome
 	import flash.errors.IllegalOperationError;
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
-	import flash.events.IEventDispatcher;
 	import flash.events.SampleDataEvent;
 	import flash.media.Sound;
 	import flash.media.SoundChannel;
+	import flash.utils.ByteArray;
 	
 	/**
 	 * Dispatched when the metronome starts.
@@ -120,19 +120,20 @@ package cc.cote.metronome
 		private var _startTime:Number = NaN;
 		private var _lastTickTime:Number = NaN;
 		private var _ticks:Number = 0.0;
-		private var _sound:Sound = new Sound();
+//		private var _preciseModeSoundReference:Sound = new Sound();
 		private var _soundChannel:SoundChannel;
 		private var _silent:Boolean = false;
 		private var _base:uint = 4;
 		private var _samplesBeforeTick:uint;
 		private var _regularBeep:Sound;
 		private var _accentedBeep:Sound;
-		private var _reference:Sound;
+		private var _normalModeSoundReference:Sound;
 		private var _i:uint = 0;
 		private var _running:Boolean = false;
 		private var _missed:uint = 0;
 		private var _maxTickCount:uint = 0;
 		private var _extraPrecise:Boolean = false;
+		private var _ba:ByteArray = new ByteArray();
 		
 		/**
 		 * Constructs a new <code>Metronome</code> object pre-set with at the desired tempo.
@@ -156,7 +157,9 @@ package cc.cote.metronome
 			
 			_regularBeep = new NormalBeep();
 			_accentedBeep = new AccentedBeep();
-			_reference = new Reference();
+			_normalModeSoundReference = new Reference();
+			
+			_ba.length = 8192 * 4 * 2;
 		}
 		
 		/**
@@ -178,7 +181,9 @@ package cc.cote.metronome
 		
 		private function _initializePreciseMode():void {
 			_samplesBeforeTick = Math.round(_interval / 1000 * SAMPLE_RATE);
-			_sound.addEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true);
+			_preciseModeSoundReference.addEventListener(
+				SampleDataEvent.SAMPLE_DATA, _onSampleData, false, 0, true
+			);
 		}
 		
 		/**
@@ -187,16 +192,10 @@ package cc.cote.metronome
 		public function stop():void {
 			_running = false;
 			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
-			_sound.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
+			_preciseModeSoundReference.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
 			_soundChannel.stop();
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime));
 			_samplesBeforeTick = 0;
-		}
-		public function stop2():void {
-			_running = false;
-			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
-			_soundChannel.stop();
-			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime));
 		}
 		
 		/** @private */
@@ -212,11 +211,12 @@ package cc.cote.metronome
 			// To maintain sound playback, we need to write between 2048 and 8192 samples to the 
 			// SampleDataEvent's byte array. If we write less (or none), the channel fires the 
 			// SOUND_COMPLETE event. If we try to write more, we get an error.
-			for (_i = 0; _i < 8192; _i++) {
-				if (_samplesBeforeTick <= 0) break;
-				e.data.writeFloat(0);
-				e.data.writeFloat(0);
-				_samplesBeforeTick--;
+			if (_samplesBeforeTick >= 8192) {
+				e.data.writeBytes(_ba);
+				_samplesBeforeTick -= 8192;
+			} else if (_samplesBeforeTick > 0) {
+				e.data.writeBytes(_ba, 0, _samplesBeforeTick * 4 * 2);
+				_samplesBeforeTick = 0;
 			}
 			
 		}
@@ -227,6 +227,8 @@ package cc.cote.metronome
 			// If metronome has been stopped, we shouldn't continue dispatching events
 			if (! _running) return;
 			
+			trace(new Date().getTime() - (_startTime + _interval * (_ticks - 1)) - _interval);
+			
 			// Jot down current tick info and dispatch event (tick is dispatched all the time while
 			// start is dispatched only the first time)
 			_lastTickTime = new Date().getTime();
@@ -235,7 +237,6 @@ package cc.cote.metronome
 				dispatchEvent( new MetronomeEvent(MetronomeEvent.START, 0, _lastTickTime));
 			}
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.TICK, _ticks, _lastTickTime));
-			
 			
 			// Play beep if requested
 			if (! _silent) {
@@ -262,17 +263,14 @@ package cc.cote.metronome
 				return;
 			}
 			
-			
 			if (_extraPrecise) {
 				_samplesBeforeTick = delay / 1000 * SAMPLE_RATE;
-				_soundChannel = _sound.play();
+				_soundChannel = _preciseModeSoundReference.play();
 			} else {
-				_soundChannel = _reference.play(_reference.length - delay);				
+				_soundChannel = _normalModeSoundReference.play(
+					_normalModeSoundReference.length - delay
+				);				
 			}
-			
-			
-			
-			
 			
 			if (_soundChannel) {
 				// Cannot use weak listener here (&*?%). I don't know why.
