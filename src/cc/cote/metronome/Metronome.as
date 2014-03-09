@@ -7,6 +7,7 @@ package cc.cote.metronome
 	import flash.events.SampleDataEvent;
 	import flash.media.Sound;
 	import flash.media.SoundChannel;
+	import flash.media.SoundTransform;
 	import flash.utils.ByteArray;
 	
 	/**
@@ -106,7 +107,7 @@ package cc.cote.metronome
 	{
 		
 		/** Version string of this release */
-		public static const VERSION:String = '1.0b';
+		public static const VERSION:String = '1.0b rev1';
 		
 		/** The maximum sound sample rate available in ActionScript (in Hertz). */
 		public static const SAMPLE_RATE:uint = 44100;
@@ -139,6 +140,8 @@ package cc.cote.metronome
 		private var _maxTickCount:uint = 0;
 		private var _extraPrecise:Boolean = false;
 		private var _ba:ByteArray = new ByteArray();
+		private var _regularBeepTransform:SoundTransform = new SoundTransform();
+		private var _accentedBeepTransform:SoundTransform = new SoundTransform();
 		
 		/**
 		 * Constructs a new <code>Metronome</code> object pre-set with at the desired tempo.
@@ -236,11 +239,14 @@ package cc.cote.metronome
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.TICK, _ticks, _lastTickTime));
 			
 			// Play audible beeps if requested
+			var ch:SoundChannel;
 			if (! _silent) {
 				if (_ticks % _base == 1 || base == 1) {
-					_accentedBeep.play();
+					ch = _accentedBeep.play();
+					ch.soundTransform = _accentedBeepTransform;
 				} else {
-					_regularBeep.play();
+					ch = _regularBeep.play();
+					ch.soundTransform = _regularBeepTransform;
 				}
 			}
 			
@@ -480,7 +486,144 @@ package cc.cote.metronome
 			}
 			
 		}
+		
+		/** 
+		 * The overall volume of the metronome's beep sounds expressed as a number between 0 
+		 * (minimum volume) and 1 (maximum volume). When set, it defines the volume of both the 
+		 * regular beep sound and the accented beep sound. If you want to control them individually, 
+		 * use the <code>regularBeepVolume</code> and <code>accentedBeepVolume</code> properties.
+		 */
+		public function get volume():Number {
+			return _regularBeepTransform.volume;
+		}
 
+		/** @private */
+		public function set volume(value:Number):void {
+			_regularBeepTransform.volume = value;
+			_accentedBeepTransform.volume = value;
+		}
+		
+		/** 
+		 * The volume of the metronome's regular beep sound expressed as a number between 0 (minimum 
+		 * volume) and 1 (maximum volume).
+		 */
+		public function get regularBeepVolume():Number {
+			return _regularBeepTransform.volume;
+		}
+
+		/** @private */
+		public function set regularBeepVolume(value:Number):void {
+			_regularBeepTransform.volume = value;
+		}
+		
+		/** 
+		 * The volume of the metronome's accented beep sound expressed as a number between 0 
+		 * (minimum volume) and 1 (maximum volume).
+		 */
+		public function get accentedBeepVolume():Number {
+			return _accentedBeepTransform.volume;
+		}
+
+		/** @private */
+		public function set accentedBeepVolume(value:Number):void {
+			_accentedBeepTransform.volume = value;
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/**
+		 * IF WE EVER WANT TO DO AWAY WITH THE EXTERNAL SOUND FILE REFERENCEs, WE COULD USE THIS 
+		 * CODE WHICH COMES FROM POPFORGE (ANDRE MICHELLE). IT ALLOWS FOR THE DYNAMIC CREATION OF 
+		 * SOUND OBJECTS WITHOUT THE STUPID BUG THAT IS STILL PLAGUING THE loadPCMFromByteArray() 
+		 * METHOD:
+		 * 
+		 * 		https://bugbase.adobe.com/index.cfm?event=bug&id=3707118
+		 * 
+		 * WE COULD DO AWAY WITH THE EMBEDDING OF THE BARE SWF BY ENCODING EACH OF ITS BYTE INTO A 
+		 * STRING OF TWO-CHARACTERS HEX VALUES
+		 * 
+		 * [Embed(source="swf.bin", mimeType="application/octet-stream")] static private const SWF: Class;
+		 * 
+		 * Creates a flash.media.Sound object from dynamic audio material
+		 * 
+		 * @param samples A uncompressed PCM ByteArray
+		 * @param channels Mono(1) or Stereo(2)
+		 * @param bits 8bit(8) or 16bit(16)
+		 * @param rate SamplingRate 5512Hz, 11025Hz, 22050Hz, 44100Hz
+		 * @param onComplete Function, that will be called after the Sound object is created. The signature must accept the Sound object as a parameter!
+		 * 
+		 * @see http://livedocs.adobe.com/flex/2/langref/flash/media/Sound.html flash.media.Sound
+		 */
+//		static public function fromByteArray( bytes: ByteArray, channels: uint, bits: uint, rate: uint, onComplete: Function ): void
+//		{
+//			
+//			//-- get naked swf bytearray
+//			var swf: ByteArray = ByteArray( new SWF() );
+//			
+//			swf.endian = Endian.LITTLE_ENDIAN;
+//			swf.position = swf.length;
+//			
+//			//-- write define sound tag header
+//			swf.writeShort( 0x3bf );
+//			swf.writeUnsignedInt( bytes.length + 7 );
+//			
+//			//-- assemble audio property byte (uncompressed little endian)
+//			var byte2: uint = 3 << 4;
+//			
+//			switch( rate )
+//			{
+//				case 44100: byte2 |= 0xc; break;
+//				case 22050: byte2 |= 0x8; break;
+//				case 11025:	byte2 |= 0x4; break;
+//			}
+//			
+//			var numSamples: int = bytes.length;
+//			
+//			if( channels == 2 )
+//			{
+//				byte2 |= 1;
+//				numSamples >>= 1;
+//			}
+//			
+//			if( bits == 16 )
+//			{
+//				byte2 |= 2;
+//				numSamples >>= 1;
+//			}
+//			
+//			//-- write define sound tag
+//			swf.writeShort( 1 );
+//			swf.writeByte( byte2 );
+//			swf.writeUnsignedInt( numSamples );
+//			swf.writeBytes( bytes );
+//			
+//			//-- write eof tag in swf stream
+//			swf.writeShort( 1 << 6 );
+//			
+//			//-- overwrite swf length
+//			swf.position = 4;
+//			swf.writeUnsignedInt( swf.length );
+//			swf.position = 0;
+//			
+//			var onSWFLoaded: Function = function( event: Event ): void
+//			{
+//				onComplete( Sound( new ( loader.contentLoaderInfo.applicationDomain.getDefinition( 'SoundItem' ) as Class )() ) );
+//			}
+//			
+//			var loader: Loader = new Loader();
+//			loader.contentLoaderInfo.addEventListener( Event.COMPLETE, onSWFLoaded );
+//			loader.loadBytes( swf );
+//		}
+		
+		
 	}
 	
 }
