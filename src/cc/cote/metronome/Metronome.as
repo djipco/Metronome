@@ -67,7 +67,7 @@ package cc.cote.metronome
 	 * <listing version="3.0">
 	 * var metro:Metronome = new Metronome();
 	 * metro.interval = 1000;
-	 * metro.silent = true;
+	 * metro.volume = 0;
 	 * metro.maxTickCount = 5;
 	 * metro.addEventListener(MetronomeEvent.TICK, onTick);
 	 * metro.addEventListener(MetronomeEvent.STOP, onTick);
@@ -143,7 +143,7 @@ package cc.cote.metronome
 		private var _accentedBeepTransform:SoundTransform = new SoundTransform();
 		
 		/**
-		 * Constructs a new <code>Metronome</code> object, pre-set at the desired tempo.
+		 * Constructs a new <code>Metronome</code> object, pre-set at the desired tempo and volume.
 		 * 
 		 * @param tempo 		The tempo to set the Metronome to (can be altered anytime with the 
 		 * 						'tempo' property).
@@ -257,8 +257,9 @@ package cc.cote.metronome
 			}
 			
 			// Calculate the interval before next tick. If the interval is negative (meaning it 
-			// should have been triggered already but was delayed because the host was overloaded), 
-			// tick right away (in the hopes of catching up). That's the best we can do.
+			// should have been triggered already but was delayed because the cpu was overloaded), 
+			// tick right away (in the hopes of catching up). That's the best we can do in this kind 
+			// of situation.
 			var delay:Number = _startTime + (_ticks * _interval) - _lastTickTime;
 			if (delay <= 10) {
 				_missed++;
