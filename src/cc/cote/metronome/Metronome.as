@@ -57,7 +57,7 @@ package cc.cote.metronome
 	 * metro.start();
 	 * 
 	 * public function onTick(e:MetronomeEvent):void {
-	 * 	trace('Tick!');
+	 * 	trace(e);
 	 * }</listing>
 	 * 
 	 * <p>If you want to use the <code>Metronome</code> more like a (more accurate) timer, you can 
@@ -128,7 +128,6 @@ package cc.cote.metronome
 		private var _startTime:Number = NaN;
 		private var _lastTickTime:Number = NaN;
 		private var _ticks:Number = 0.0;
-		private var _silent:Boolean = false;
 		private var _base:uint = 4;
 		private var _regularBeep:Sound = new NormalBeep();
 		private var _accentedBeep:Sound = new AccentedBeep();
@@ -144,22 +143,21 @@ package cc.cote.metronome
 		private var _accentedBeepTransform:SoundTransform = new SoundTransform();
 		
 		/**
-		 * Constructs a new <code>Metronome</code> object pre-set with at the desired tempo.
+		 * Constructs a new <code>Metronome</code> object, pre-set at the desired tempo.
 		 * 
 		 * @param tempo 		The tempo to set the Metronome to (can be altered anytime with the 
 		 * 						'tempo' property).
-		 * @param silent		Indicates whether the Metronome should play audible beeps or stay 
-		 * 						silent.
+		 * @param volume		The volume of the beep sounds.
 		 * @param base			Determines when to play accented beeps. Accented beeps will play 
 		 * 						once in every n beats where n is the base.
 		 * @param maxTickCount	The maximum number ot ticks to trigger. The default (0) means no 
 		 * 						maximum.
 		 */
 		public function Metronome(
-			tempo:uint = 120, silent:Boolean = false, base:uint = 4, maxTickCount:uint = 0
+			tempo:uint = 120, volume:Number = 1.0, base:uint = 4, maxTickCount:uint = 0
 		) {
 			this.tempo = tempo;
-			this.silent = silent;
+			this.volume = volume;
 			this.base = base;
 			_maxTickCount = maxTickCount;
 			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2; // Samples are floats and stereo (hence *4 *2)
@@ -240,11 +238,13 @@ package cc.cote.metronome
 			
 			// Play audible beeps if requested
 			var ch:SoundChannel;
-			if (! _silent) {
-				if (_ticks % _base == 1 || base == 1) {
+			if (_ticks % _base == 1 || base == 1) {
+				if (_accentedBeepTransform.volume > 0) {
 					ch = _accentedBeep.play();
 					ch.soundTransform = _accentedBeepTransform;
-				} else {
+				}
+			} else {
+				if (_regularBeepTransform.volume > 0) {
 					ch = _regularBeep.play();
 					ch.soundTransform = _regularBeepTransform;
 				}
@@ -365,16 +365,6 @@ package cc.cote.metronome
 			return _ticks;
 		}
 		
-		/** Boolean indicating whether the beep sounds should be played or not. */
-		public function get silent():Boolean {
-			return _silent;
-		}
-		
-		/** @private */
-		public function set silent(value:Boolean):void {
-			_silent = value;
-		}
-		
 		/**
 		 * The base tells the <code>Metronome</code> when to play accented beeps. The accented 
 		 * beep is played once every n beats where n is the base. If you set the base to 1, all 
@@ -491,7 +481,7 @@ package cc.cote.metronome
 		 * The overall volume of the metronome's beep sounds expressed as a number between 0 
 		 * (minimum volume) and 1 (maximum volume). When set, it defines the volume of both the 
 		 * regular beep sound and the accented beep sound. If you want to control them individually, 
-		 * use the <code>regularBeepVolume</code> and <code>accentedBeepVolume</code> properties.
+		 * use the <code>regularBeepVolume</code> and <code>accentedBeepVolume</code> properties. 
 		 */
 		public function get volume():Number {
 			return _regularBeepTransform.volume;
