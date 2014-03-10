@@ -35,7 +35,7 @@ package cc.cote.metronome
 	 * The <code>Metronome</code> class plays a beep sound (optional) and dispatches events at  
 	 * regular intervals in a fashion similar to ActionScript's native <code>Timer</code> object. 
 	 * However, unlike the <code>Timer</code> class, the <code>Metronome</code> class is not 
-	 * affected by the player's frame rate. This makes it more precise and prevents the drifting 
+	 * affected by the runtime's frame rate. This makes it more precise and prevents the drifting 
 	 * problem that occurs over time with a <code>Timer</code> object.
 	 * 
 	 * <p>At a moderate tempo, our tests show that the accuracy of the metronome is within ±0.03% 
@@ -119,16 +119,15 @@ package cc.cote.metronome
 		 */
 		private const MAX_BUFFER_SAMPLES:uint = 8192;
 		
-		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private const NormalBeep:Class;
-		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private const AccentedBeep:Class;
-		[Embed(source='/cc/cote/metronome/sounds/Silence.mp3')] private const Reference:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine880Hz.mp3')] private var NormalBeep:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Sine1760Hz.mp3')] private var AccentedBeep:Class;
+		[Embed(source='/cc/cote/metronome/sounds/Silence.mp3')] private var Reference:Class;
 		
 		private var _tempo:Number = 120;
 		private var _interval:Number = 500.0;
 		private var _startTime:Number = NaN;
 		private var _lastTickTime:Number = NaN;
-		private var _ticks:Number = 0.0;
-		private var _base:uint = 4;
+		private var _ticks:uint = 0;
 		private var _regularBeep:Sound = new NormalBeep();
 		private var _accentedBeep:Sound = new AccentedBeep();
 		private var _soundReference:Sound = new Reference();
@@ -141,6 +140,7 @@ package cc.cote.metronome
 		private var _ba:ByteArray = new ByteArray();
 		private var _regularBeepTransform:SoundTransform = new SoundTransform();
 		private var _accentedBeepTransform:SoundTransform = new SoundTransform();
+		private var _pattern:Array = [];
 		
 		/**
 		 * Constructs a new <code>Metronome</code> object, pre-set at the desired tempo and volume.
@@ -148,19 +148,21 @@ package cc.cote.metronome
 		 * @param tempo 		The tempo to set the Metronome to (can be altered anytime with the 
 		 * 						'tempo' property).
 		 * @param volume		The volume of the beep sounds.
-		 * @param base			Determines when to play accented beeps. Accented beeps will play 
-		 * 						once in every n beats where n is the base.
+		 * @param pattern		This array tells the metronome when it should play the accented beep
+		 * 						sound instead of the regular beep sound. See the documentation of 
+		 * 						the <code>pattern</code> property for more details. By default an
+		 * 						empty array is used meaning no beeps will be accented.
 		 * @param maxTickCount	The maximum number ot ticks to trigger. The default (0) means no 
 		 * 						maximum.
 		 */
 		public function Metronome(
-			tempo:uint = 120, volume:Number = 1.0, base:uint = 4, maxTickCount:uint = 0
+			tempo:uint = 120, volume:Number = 1.0, pattern:Array = null, maxTickCount:uint = 0
 		) {
 			this.tempo = tempo;
 			this.volume = volume;
-			this.base = base;
+			if (pattern) _pattern = pattern;
 			_maxTickCount = maxTickCount;
-			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2; // Samples are floats and stereo (hence *4 *2)
+			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2; 	// Samples are 32bits floats (1byte x4) and stereo (x2)
 		}
 		
 		/**
@@ -236,9 +238,11 @@ package cc.cote.metronome
 			}
 			dispatchEvent( new MetronomeEvent(MetronomeEvent.TICK, _ticks, _lastTickTime));
 			
-			// Play audible beeps if requested
+			// Play audible beeps if requested (according to the specified pattern)
 			var ch:SoundChannel;
-			if (_ticks % _base == 1 || base == 1) {
+			var pos:uint = (_ticks - 1) % _pattern.length;
+			
+			if (!isNaN(pos) && _pattern[pos]) {
 				if (_accentedBeepTransform.volume > 0) {
 					ch = _accentedBeep.play();
 					ch.soundTransform = _accentedBeepTransform;
@@ -362,23 +366,23 @@ package cc.cote.metronome
 		 * The number of times the metronome ticked. This number is reset on start but not on stop.
 		 * This means you can retrieve the number of times it ticked even after it was stopped.
 		 */
-		public function get ticks():Number {
+		public function get ticks():uint {
 			return _ticks;
 		}
 		
-		/**
-		 * The base tells the <code>Metronome</code> when to play accented beeps. The accented 
-		 * beep is played once every n beats where n is the base. If you set the base to 1, all 
-		 * beeps will be accented. If you set the base to 0, no beat will be accented.
-		 */
-		public function get base():uint {
-			return _base;
-		}
-		
-		/** @private */
-		public function set base(value:uint):void {
-			_base = value;
-		}
+//		/**
+//		 * The base tells the <code>Metronome</code> when to play accented beeps. The accented 
+//		 * beep is played once every n beats where n is the base. If you set the base to 1, all 
+//		 * beeps will be accented. If you set the base to 0, no beat will be accented.
+//		 */
+//		public function get base():uint {
+//			return _base;
+//		}
+//		
+//		/** @private */
+//		public function set base(value:uint):void {
+//			_base = value;
+//		}
 
 		/** Indicates whether the metronome is currently running. */ 
 		public function get running():Boolean {
@@ -518,6 +522,20 @@ package cc.cote.metronome
 		/** @private */
 		public function set accentedBeepVolume(value:Number):void {
 			_accentedBeepTransform.volume = value;
+		}
+
+		/** 
+		 * This array defines the beeps that will be accented by the metronome. Each entry in the 
+		 * array is a boolean value. A 'true' value means the beep will be accented and a value of
+		 * 'false' means it will not.
+		 */
+		public function get pattern():Array {
+			return _pattern;
+		}
+
+		/** @private */
+		public function set pattern(value:Array):void {
+			_pattern = value;
 		}
 		
 		
