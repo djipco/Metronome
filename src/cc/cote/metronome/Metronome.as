@@ -163,6 +163,7 @@ package cc.cote.metronome
 			if (pattern) _pattern = pattern;
 			_maxTickCount = maxTickCount;
 			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2; 	// Samples are 32bits floats (1byte x4) and stereo (x2)
+			
 		}
 		
 		/**
@@ -283,7 +284,8 @@ package cc.cote.metronome
 				_soundChannel.addEventListener(Event.SOUND_COMPLETE, _tick);
 			} else {
 				throw new IllegalOperationError(
-					"No sound channels are available to use as Metronome's time reference"
+					"To use the Metronome class, you need a sound card and at least one free " +
+					"sound channel."
 				);
 			}
 			
