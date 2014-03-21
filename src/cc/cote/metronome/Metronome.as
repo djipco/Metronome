@@ -97,7 +97,8 @@ package cc.cote.metronome
 	 * <p><b>Requirements</b></p>
 	 * 
 	 * <p>Because it uses the <code>SampleDataEvent</code> class of the Sound API, the 
-	 * <code>Metronome</code> class only works in Flash Player 10+ and AIR 1.5+.</p>
+	 * <code>Metronome</code> class only works in Flash Player 10+ and AIR 1.5+. Also, the system
+	 * must have a sound card and one free available sound channel.</p>
 	 * 
 	 * @see cc.cote.metronome.MetronomeEvent
 	 * @see http://cote.cc/projects/metronome
@@ -163,7 +164,6 @@ package cc.cote.metronome
 			if (pattern) _pattern = pattern;
 			_maxTickCount = maxTickCount;
 			_ba.length = MAX_BUFFER_SAMPLES * 4 * 2; 	// Samples are 32bits floats (1byte x4) and stereo (x2)
-			
 		}
 		
 		/**
