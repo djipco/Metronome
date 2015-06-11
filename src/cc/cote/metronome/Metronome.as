@@ -195,10 +195,14 @@ package cc.cote.metronome
 			if ( _soundReference.hasEventListener(SampleDataEvent.SAMPLE_DATA) ) {
 				_soundReference.removeEventListener(SampleDataEvent.SAMPLE_DATA, _onSampleData);
 			}
-			_running = false;
-			_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
-			_soundChannel.stop();
-			dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime) );
+			if (_soundChannel) {
+				_soundChannel.removeEventListener(Event.SOUND_COMPLETE, _tick);
+				_soundChannel.stop();
+			}
+			if (_running) {
+				_running = false;
+				dispatchEvent( new MetronomeEvent(MetronomeEvent.STOP, _ticks, _lastTickTime) );
+			}
 			_samplesBeforeTick = 0;
 		}
 		
